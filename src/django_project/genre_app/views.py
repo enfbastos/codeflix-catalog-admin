@@ -86,12 +86,14 @@ class GenreViewSet(viewsets.ViewSet):
             "id": pk,
         })
         serializer.is_valid(raise_exception=True)
+
         input = UpdateGenre.Input(**serializer.validated_data)
 
         use_case = UpdateGenre(
             repository=DjangoORMGenreRepository(),
             category_repository=DjangoORMCategoryRepository(),
         )
+
         try:
             use_case.execute(input)
         except GenreNotFound:
@@ -104,5 +106,5 @@ class GenreViewSet(viewsets.ViewSet):
                 status=HTTP_400_BAD_REQUEST,
                 data={"error": str(error)},
             )
-
+        
         return Response(status=HTTP_204_NO_CONTENT)
