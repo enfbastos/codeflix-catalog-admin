@@ -1,14 +1,14 @@
 from unittest.mock import create_autospec
 
 import pytest
-from src.core.cast_member.domain.cast_member_repository import CastMemberRepository
+
+from src.core._shared.application.use_case import (ListInput, ListOutput,
+                                                   ListOutputMeta)
 from src.core.cast_member.application.use_cases.list_cast_member import (
-    CastMemberOutput,
-    ListCastMember,
-    ListCastMemberRequest,
-    ListCastMemberResponse,
-)
+    CastMemberOutput, ListCastMember)
 from src.core.cast_member.domain.cast_member import CastMember, CastMemberType
+from src.core.cast_member.domain.cast_member_repository import \
+    CastMemberRepository
 
 
 class TestListCastMember:
@@ -50,9 +50,9 @@ class TestListCastMember:
         mock_empty_repository: CastMemberRepository,
     ) -> None:
         use_case = ListCastMember(repository=mock_empty_repository)
-        response = use_case.execute(request=ListCastMemberRequest())
+        response = use_case.execute(request=ListInput())
 
-        assert response == ListCastMemberResponse(data=[])
+        assert response == ListOutput(data=[])
 
     def test_when_cast_members_exist_then_return_mapped_list(
         self,
@@ -61,9 +61,9 @@ class TestListCastMember:
         director: CastMember,
     ) -> None:
         use_case = ListCastMember(repository=mock_populated_repository)
-        response = use_case.execute(request=ListCastMemberRequest())
+        response = use_case.execute(request=ListInput())
 
-        assert response == ListCastMemberResponse(
+        assert response == ListOutput(
             data=[
                 CastMemberOutput(
                     id=actor.id,
@@ -75,5 +75,10 @@ class TestListCastMember:
                     name=director.name,
                     type=director.type,
                 ),
-            ]
+            ],
+            meta=ListOutputMeta(
+                current_page=1,
+                per_page=2,
+                total=2
+            )
         )

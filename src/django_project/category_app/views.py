@@ -10,6 +10,7 @@ from rest_framework.status import (
     HTTP_201_CREATED,
 )
 
+from src.core._shared.application.use_case import ListInput, ListOutput
 from src.core.category.application.use_cases.create_category import (
     CreateCategory,
     CreateCategoryRequest,
@@ -23,9 +24,7 @@ from src.core.category.application.use_cases.get_category import (
     GetCategoryRequest,
 )
 from src.core.category.application.use_cases.list_category import (
-    ListCategory,
-    ListCategoryRequest,
-    ListCategoryResponse,
+    ListCategory
 )
 from src.core.category.application.use_cases.update_category import UpdateCategory, UpdateCategoryRequest
 from src.django_project.category_app.repository import DjangoORMCategoryRepository
@@ -44,7 +43,7 @@ class CategoryViewSet(viewsets.ViewSet):
     def list(self, request: Request) -> Response:
         order_by = request.query_params.get("order_by", "name")
         use_case = ListCategory(repository=DjangoORMCategoryRepository())
-        output: ListCategoryResponse = use_case.execute(request=ListCategoryRequest(
+        output: ListOutput = use_case.execute(request=ListInput(
             order_by=order_by,
             current_page=int(request.query_params.get("current_page", 1)),
         ))

@@ -1,8 +1,13 @@
+from src.core._shared.application.use_case import (ListInput, ListOutput,
+                                                   ListOutputMeta)
 from src.core.category.domain.category import Category
-from src.core.category.infra.in_memory_category_repository import InMemoryCategoryRepository
-from src.core.genre.application.use_cases.list_genre import ListGenre, GenreOutput
+from src.core.category.infra.in_memory_category_repository import \
+    InMemoryCategoryRepository
+from src.core.genre.application.use_cases.list_genre import (GenreOutput,
+                                                             ListGenre)
 from src.core.genre.domain.genre import Genre
-from src.core.genre.infra.in_memory_genre_repository import InMemoryGenreRepository
+from src.core.genre.infra.in_memory_genre_repository import \
+    InMemoryGenreRepository
 
 
 class TestListGenre:
@@ -27,9 +32,9 @@ class TestListGenre:
 
 
         use_case = ListGenre(repository=genre_repository)
-        output = use_case.execute(ListGenre.Input())
+        output = use_case.execute(ListInput())
 
-        assert output == ListGenre.Output(
+        assert output == ListOutput(
             data=[
                 GenreOutput(
                     id=genre_drama.id,
@@ -43,5 +48,10 @@ class TestListGenre:
                     categories=set(),
                     is_active=True,
                 ),
-            ]
+            ],
+            meta=ListOutputMeta(
+                current_page=1,
+                per_page=2,
+                total=2
+            )
         )

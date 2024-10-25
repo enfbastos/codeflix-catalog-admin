@@ -2,11 +2,10 @@ from unittest.mock import create_autospec
 
 import pytest
 
+from src.core._shared.application.use_case import ListInput, ListOutput, ListOutputMeta
 from src.core.category.application.use_cases.list_category import (
     CategoryOutput,
-    ListCategory,
-    ListCategoryRequest,
-    ListCategoryResponse, ListOutputMeta,
+    ListCategory
 )
 from src.core.category.domain.category import Category
 from src.core.category.domain.category_repository import CategoryRepository
@@ -60,9 +59,9 @@ class TestListCategory:
         mock_empty_repository: CategoryRepository,
     ) -> None:
         use_case = ListCategory(repository=mock_empty_repository)
-        response = use_case.execute(request=ListCategoryRequest())
+        response = use_case.execute(request=ListInput())
 
-        assert response == ListCategoryResponse(
+        assert response == ListOutput(
             data=[],
             meta=ListOutputMeta(
                 current_page=1,
@@ -79,9 +78,9 @@ class TestListCategory:
         category_documentary: Category,
     ) -> None:
         use_case = ListCategory(repository=mock_populated_repository)
-        response = use_case.execute(request=ListCategoryRequest())
+        response = use_case.execute(request=ListInput())
 
-        assert response == ListCategoryResponse(
+        assert response == ListOutput(
             data=[
                 CategoryOutput(
                     id=category_documentary.id,
@@ -113,9 +112,9 @@ class TestListCategory:
 
     def test_fetch_page_without_elements(self, mock_populated_repository: CategoryRepository) -> None:
         use_case = ListCategory(repository=mock_populated_repository)
-        response = use_case.execute(request=ListCategoryRequest(current_page=3))
+        response = use_case.execute(request=ListInput(current_page=3))
 
-        assert response == ListCategoryResponse(
+        assert response == ListOutput(
             data=[],
             meta=ListOutputMeta(
                 current_page=3,
@@ -130,9 +129,9 @@ class TestListCategory:
         category_series: Category,  # Foi "empurrado" para última página
     ) -> None:
         use_case = ListCategory(repository=mock_populated_repository)
-        response = use_case.execute(request=ListCategoryRequest(current_page=2))
+        response = use_case.execute(request=ListInput(current_page=2))
 
-        assert response == ListCategoryResponse(
+        assert response == ListOutput(
             data=[
                 CategoryOutput(
                     id=category_series.id,

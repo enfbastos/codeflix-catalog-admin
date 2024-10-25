@@ -1,10 +1,9 @@
 import pytest
 
+from src.core._shared.application.use_case import ListInput, ListOutput, ListOutputMeta
 from src.core.category.application.use_cases.list_category import (
     CategoryOutput,
-    ListCategory,
-    ListCategoryRequest,
-    ListCategoryResponse, ListOutputMeta,
+    ListCategory
 )
 from src.core.category.domain.category import Category
 from src.core.category.infra.in_memory_category_repository import (
@@ -37,9 +36,9 @@ class TestListCategory:
     def test_when_no_categories_then_return_empty_list(self) -> None:
         empty_repository = InMemoryCategoryRepository()
         use_case = ListCategory(repository=empty_repository)
-        response = use_case.execute(request=ListCategoryRequest())
+        response = use_case.execute(request=ListInput())
 
-        assert response == ListCategoryResponse(
+        assert response == ListOutput(
             data=[],
             meta=ListOutputMeta(),
         )
@@ -56,9 +55,9 @@ class TestListCategory:
         repository.save(category=category_documentary)
 
         use_case = ListCategory(repository=repository)
-        response = use_case.execute(request=ListCategoryRequest())
+        response = use_case.execute(request=ListInput())
 
-        assert response == ListCategoryResponse(
+        assert response == ListOutput(
             data=[
                 CategoryOutput(
                     id=category_documentary.id,

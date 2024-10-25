@@ -1,13 +1,12 @@
 from uuid import UUID, uuid4
-from django.test import override_settings
-from django.urls import reverse
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
+
 from src.core.category.domain.category import Category
 from src.core.genre.domain.genre import Genre
-
-from src.django_project.category_app.repository import DjangoORMCategoryRepository
+from src.django_project.category_app.repository import \
+    DjangoORMCategoryRepository
 from src.django_project.genre_app.repository import DjangoORMGenreRepository
 
 
@@ -68,10 +67,11 @@ class TestListAPI:
     ) -> None:
         category_repository.save(category_movie)
         category_repository.save(category_documentary)
+
         genre_repository.save(genre_romance)
         genre_repository.save(genre_drama)
 
-        url = "/api/genres/"
+        url = "/api/genres/?order_by=name"
         response = APIClient().get(url)
 
         # TODO: Quando implementarmos ordenação, poderemos comparar expected_data
@@ -97,17 +97,17 @@ class TestListAPI:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["data"]
-        assert response.data["data"][0]["id"] == str(genre_romance.id)
-        assert response.data["data"][0]["name"] == "Romance"
+        assert response.data["data"][0]["id"] == str(genre_drama.id)
+        assert response.data["data"][0]["name"] == "Drama"
         assert response.data["data"][0]["is_active"] is True
-        assert set(response.data["data"][0]["categories"]) == {
+        assert response.data["data"][0]["categories"] == []
+        assert response.data["data"][1]["id"] == str(genre_romance.id)
+        assert response.data["data"][1]["name"] == "Romance"
+        assert response.data["data"][1]["is_active"] is True
+        assert set(response.data["data"][1]["categories"]) == {
             str(category_documentary.id),
             str(category_movie.id),
         }
-        assert response.data["data"][1]["id"] == str(genre_drama.id)
-        assert response.data["data"][1]["name"] == "Drama"
-        assert response.data["data"][1]["is_active"] is True
-        assert response.data["data"][1]["categories"] == []
 
 
 @pytest.mark.django_db

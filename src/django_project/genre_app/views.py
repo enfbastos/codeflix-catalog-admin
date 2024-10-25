@@ -10,6 +10,7 @@ from rest_framework.status import (
     HTTP_201_CREATED, HTTP_400_BAD_REQUEST,
 )
 
+from src.core._shared.application.use_case import ListInput, ListOutput
 from src.core.genre.application.use_cases import (
     ListGenre,
     CreateGenre,
@@ -35,7 +36,11 @@ from src.django_project.genre_app.serializers import (
 class GenreViewSet(viewsets.ViewSet):
     def list(self, request: Request) -> Response:
         use_case = ListGenre(repository=DjangoORMGenreRepository())
-        output: ListGenre.Input = use_case.execute(ListGenre.Input())
+        input = ListInput(
+            order_by=request.query_params.get("order_by", "name"),
+            current_page=int(request.query_params.get("current_page", 1))
+        )
+        output: ListOutput = use_case.execute(input)
         response_serializer = ListGenreOutputSerializer(output)
 
         return Response(
