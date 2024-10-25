@@ -67,7 +67,7 @@ class TestUpdateCategory:
     def test_cannot_update_category_with_empty_name(self):
         with pytest.raises(ValueError, match="name cannot be empty"):
             Category(name="")
-
+    
 
 class TestActivate:
     def test_activate_inactive_category(self):
