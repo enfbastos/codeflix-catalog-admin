@@ -30,9 +30,12 @@ from src.django_project.genre_app.serializers import (
     CreateGenreOutputSerializer,
     UpdateGenreInputSerializer,
 )
+from src.django_project.permissions import IsAdmin, IsAuthenticated
 
 
 class GenreViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated & IsAdmin]
+    
     def list(self, request: Request) -> Response:
         use_case = ListGenre(repository=DjangoORMGenreRepository())
         output: ListGenre.Input = use_case.execute(ListGenre.Input())

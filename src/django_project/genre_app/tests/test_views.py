@@ -1,6 +1,8 @@
+import os
 from uuid import UUID, uuid4
 from django.test import override_settings
 from django.urls import reverse
+import jwt
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -9,6 +11,20 @@ from src.core.genre.domain.genre import Genre
 
 from src.django_project.category_app.repository import DjangoORMCategoryRepository
 from src.django_project.genre_app.repository import DjangoORMGenreRepository
+
+
+@pytest.fixture
+def access_token() -> str:
+    payload = {"realm_access": {"roles": ["offline_access","admin","uma_authorization","default-roles-codeflix"]}, "aud": "account"}
+    encoded = jwt.encode(payload, os.getenv("AUTH_PRIVATE_KEY", ""), algorithm="RS256")
+    return encoded
+
+
+@pytest.fixture
+def client(access_token: str) -> APIClient:
+    return APIClient(headers={
+        "Authorization": f"Bearer {access_token}",
+    })
 
 
 @pytest.fixture
@@ -59,6 +75,7 @@ def genre_repository() -> DjangoORMGenreRepository:
 class TestListAPI:
     def test_list_genres_and_categories(
         self,
+        client: APIClient,
         category_movie: Category,
         category_documentary: Category,
         category_repository: DjangoORMCategoryRepository,
@@ -72,7 +89,7 @@ class TestListAPI:
         genre_repository.save(genre_drama)
 
         url = "/api/genres/"
-        response = APIClient().get(url)
+        response = client.get(url)
 
         # TODO: Quando implementarmos ordenação, poderemos comparar expected_data
         # expected_data = {
@@ -114,6 +131,7 @@ class TestListAPI:
 class TestCreateAPI:
     def test_when_request_data_is_valid_then_create_genre(
         self,
+        client: APIClient,
         category_repository: DjangoORMCategoryRepository,
         category_movie: Category,
         genre_repository: DjangoORMGenreRepository,
@@ -125,7 +143,7 @@ class TestCreateAPI:
             "name": "Romance",
             "categories": [category_movie.id],
         }
-        response = APIClient().post(url, data=data)
+        response = client.post(url, data=data)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["id"]
@@ -138,25 +156,29 @@ class TestCreateAPI:
             categories={category_movie.id},
         )
 
-    def test_when_request_data_is_invalid_then_return_400(self) -> None:
+    def test_when_request_data_is_invalid_then_return_400(
+        self,
+        client: APIClient,
+    ) -> None:
         url = "/api/genres/"
         data = {
             "name": "",
         }
-        response = APIClient().post(url, data=data)
+        response = client.post(url, data=data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"name": ["This field may not be blank."]}
 
     def test_when_related_categories_do_not_exist_then_return_400(
         self,
+        client: APIClient,
     ) -> None:
         url = "/api/genres/"
         data = {
             "name": "Romance",
             "categories": [uuid4()],
         }
-        response = APIClient().post(url, data=data)
+        response = client.post(url, data=data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Categories with provided IDs not found" in response.data["error"]
@@ -166,6 +188,7 @@ class TestCreateAPI:
 class TestUpdateAPI:
     def test_when_request_data_is_valid_then_update_genre(
         self,
+        client: APIClient,
         category_repository: DjangoORMCategoryRepository,
         category_movie: Category,
         category_documentary: Category,
@@ -182,7 +205,7 @@ class TestUpdateAPI:
             "is_active": True,
             "categories": [category_documentary.id],
         }
-        response = APIClient().put(url, data=data)
+        response = client.put(url, data=data)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         updated_genre = genre_repository.get_by_id(genre_romance.id)
@@ -192,6 +215,7 @@ class TestUpdateAPI:
 
     def test_when_request_data_is_invalid_then_return_400(
         self,
+        client: APIClient,
         genre_drama: Genre,
     ) -> None:
         url = f"/api/genres/{str(genre_drama.id)}/"
@@ -200,13 +224,14 @@ class TestUpdateAPI:
             "is_active": True,
             "categories": [],
         }
-        response = APIClient().put(url, data=data)
+        response = client.put(url, data=data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"name": ["This field may not be blank."]}
 
     def test_when_related_categories_do_not_exist_then_return_400(
         self,
+        client: APIClient,
         category_repository: DjangoORMCategoryRepository,
         category_movie: Category,
         category_documentary: Category,
@@ -223,40 +248,50 @@ class TestUpdateAPI:
             "is_active": True,
             "categories": [uuid4()],  # non-existent category
         }
-        response = APIClient().put(url, data=data)
+        response = client.put(url, data=data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Categories with provided IDs not found" in response.data["error"]
 
-    def test_when_genre_does_not_exist_then_return_404(self) -> None:
+    def test_when_genre_does_not_exist_then_return_404(
+        self,
+        client: APIClient,
+    ) -> None:
         url = f"/api/genres/{str(uuid4())}/"
         data = {
             "name": "Romance",
             "is_active": True,
             "categories": [],
         }
-        response = APIClient().put(url, data=data)
+        response = client.put(url, data=data)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
 class TestDeleteAPI:
-    def test_when_genre_pk_is_invalid_then_return_400(self) -> None:
+    def test_when_genre_pk_is_invalid_then_return_400(
+        self,
+        client: APIClient,
+    ) -> None:
         url = "/api/genres/invalid_uuid/"
-        response = APIClient().delete(url)
+        response = client.delete(url)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"id": ["Must be a valid UUID."]}
 
-    def test_when_genre_not_found_then_return_404(self) -> None:
+    def test_when_genre_not_found_then_return_404(
+        self,
+        client: APIClient,
+    ) -> None:
         url = f"/api/genres/{str(uuid4())}/"
-        response = APIClient().delete(url)
+        response = client.delete(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_when_genre_found_then_delete_genre(
         self,
+        client: APIClient,
         category_repository: DjangoORMCategoryRepository,
         category_movie: Category,
         category_documentary: Category,
@@ -268,7 +303,7 @@ class TestDeleteAPI:
         genre_repository.save(genre_romance)
 
         url = f"/api/genres/{str(genre_romance.id)}/"
-        response = APIClient().delete(url)
+        response = client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert genre_repository.get_by_id(genre_romance.id) is None

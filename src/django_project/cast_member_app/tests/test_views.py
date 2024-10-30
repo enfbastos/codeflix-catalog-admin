@@ -1,12 +1,30 @@
+import os
 from uuid import UUID, uuid4
+
+import jwt
+import pytest
 from django.test import override_settings
 from django.urls import reverse
-import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
-from src.core.cast_member.domain.cast_member import CastMember, CastMemberType
 
-from src.django_project.cast_member_app.repository import DjangoORMCastMemberRepository
+from src.core.cast_member.domain.cast_member import CastMember, CastMemberType
+from src.django_project.cast_member_app.repository import \
+    DjangoORMCastMemberRepository
+
+
+@pytest.fixture
+def access_token() -> str:
+    payload = {"realm_access": {"roles": ["offline_access","admin","uma_authorization","default-roles-codeflix"]}, "aud": "account"}
+    encoded = jwt.encode(payload, os.getenv("AUTH_PRIVATE_KEY", ""), algorithm="RS256")
+    return encoded
+
+
+@pytest.fixture
+def client(access_token: str) -> APIClient:
+    return APIClient(headers={
+        "Authorization": f"Bearer {access_token}",
+    })
 
 
 @pytest.fixture
@@ -34,6 +52,7 @@ def cast_member_repository() -> DjangoORMCastMemberRepository:
 class TestListAPI:
     def test_list_cast_members(
         self,
+        client: APIClient,
         actor: CastMember,
         director: CastMember,
         cast_member_repository: DjangoORMCastMemberRepository,
@@ -42,7 +61,7 @@ class TestListAPI:
         cast_member_repository.save(director)
 
         url = "/api/cast_members/"
-        response = APIClient().get(url)
+        response = client.get(url)
 
         expected_data = {
             "data": [
@@ -67,6 +86,7 @@ class TestListAPI:
 class TestCreateAPI:
     def test_when_request_data_is_valid_then_create_cast_member(
         self,
+        client: APIClient,
         cast_member_repository: DjangoORMCastMemberRepository,
     ) -> None:
         url = reverse("cast_member-list")
@@ -74,7 +94,7 @@ class TestCreateAPI:
             "name": "John Doe",
             "type": "ACTOR",
         }
-        response = APIClient().post(url, data=data)
+        response = client.post(url, data=data)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["id"]
@@ -86,13 +106,16 @@ class TestCreateAPI:
             type=CastMemberType.ACTOR,
         )
 
-    def test_when_request_data_is_invalid_then_return_400(self) -> None:
+    def test_when_request_data_is_invalid_then_return_400(
+        self,
+        client: APIClient,
+    ) -> None:
         url = reverse("cast_member-list")
         data = {
             "name": "",
             "type": "",
         }
-        response = APIClient().post(url, data=data)
+        response = client.post(url, data=data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {
@@ -105,6 +128,7 @@ class TestCreateAPI:
 class TestUpdateAPI:
     def test_when_request_data_is_valid_then_update_cast_member(
         self,
+        client: APIClient,
         actor: CastMember,
         cast_member_repository: DjangoORMCastMemberRepository,
     ) -> None:
@@ -115,7 +139,7 @@ class TestUpdateAPI:
             "name": "Another Actor",
             "type": "DIRECTOR",
         }
-        response = APIClient().put(url, data=data)
+        response = client.put(url, data=data)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not response.data
@@ -123,12 +147,15 @@ class TestUpdateAPI:
         assert updated_cast_member.name == "Another Actor"
         assert updated_cast_member.type == CastMemberType.DIRECTOR
 
-    def test_when_request_data_is_invalid_then_return_400(self) -> None:
+    def test_when_request_data_is_invalid_then_return_400(
+        self,
+        client: APIClient,
+    ) -> None:
         url = reverse("cast_member-detail", kwargs={"pk": "invalid-uuid"})
         data = {
             "name": "",
         }
-        response = APIClient().put(url, data=data)
+        response = client.put(url, data=data)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {
@@ -139,41 +166,49 @@ class TestUpdateAPI:
 
     def test_when_cast_member_with_id_does_not_exist_then_return_404(
         self,
+        client: APIClient,
     ) -> None:
         url = reverse("cast_member-detail", kwargs={"pk": uuid4()})
         data = {
             "name": "Not Actor",
             "type": "DIRECTOR",
         }
-        response = APIClient().put(url, data=data)
+        response = client.put(url, data=data)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
 class TestDeleteAPI:
-    def test_when_cast_member_pk_is_invalid_then_return_400(self) -> None:
+    def test_when_cast_member_pk_is_invalid_then_return_400(
+        self,
+        client: APIClient,
+    ) -> None:
         url = reverse("cast_member-detail", kwargs={"pk": "invalid-uuid"})
-        response = APIClient().delete(url)
+        response = client.delete(url)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"id": ["Must be a valid UUID."]}
 
-    def test_when_cast_member_not_found_then_return_404(self) -> None:
+    def test_when_cast_member_not_found_then_return_404(
+        self,
+        client: APIClient,
+    ) -> None:
         url = reverse("cast_member-detail", kwargs={"pk": uuid4()})
-        response = APIClient().delete(url)
+        response = client.delete(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_when_cast_member_found_then_delete_cast_member(
         self,
+        client: APIClient,
         actor: CastMember,
         cast_member_repository: DjangoORMCastMemberRepository,
     ) -> None:
         cast_member_repository.save(actor)
 
         url = reverse("cast_member-detail", kwargs={"pk": actor.id})
-        response = APIClient().delete(url)
+        response = client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not response.data

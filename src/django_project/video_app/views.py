@@ -8,11 +8,13 @@ from src.core._shared.events.message_bus import MessageBus
 from src.core._shared.infrastructure.storage.local_storage import LocalStorage
 from src.core.video.application.use_cases.exceptions import VideoNotFound
 from src.core.video.application.use_cases.upload_video import UploadVideo
+from src.django_project.permissions import IsAdmin, IsAuthenticated
 from src.django_project.video_app.repository import DjangoORMVideoRepository
 
 
 class VideoViewSet(viewsets.ViewSet):
-
+    permission_classes = [IsAuthenticated & IsAdmin]
+        
     def list(self, request: Request) -> Response:
         raise NotImplementedError
 

@@ -16,7 +16,8 @@ class JwtAuthService(AuthService):
     def _decode_token(self) -> dict:
         try:
             return jwt.decode(self.token, self.public_key, algorithms=["RS256"], audience="account")
-        except jwt.PyJWTError:
+        except jwt.PyJWTError as err:
+            print(err)
             return {}
 
     def is_authenticated(self) -> bool:

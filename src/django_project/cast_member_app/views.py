@@ -35,9 +35,12 @@ from src.django_project.cast_member_app.serializers import (
     ListCastMemberResponseSerializer,
     UpdateCastMemberRequestSerializer,
 )
+from src.django_project.permissions import IsAdmin, IsAuthenticated
 
 
 class CastMemberViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated & IsAdmin]
+    
     def list(self, request: Request) -> Response:
         use_case = ListCastMember(repository=DjangoORMCastMemberRepository())
         output: ListCastMemberResponse = use_case.execute(request=ListCastMemberRequest())
