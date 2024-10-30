@@ -109,6 +109,7 @@ class TestUploadVideoMedia:
         self.send_message_to_rabbit_mq(video_id)
         
         # time.sleep(1)
+        # video_model = VideoORM.objects.get(id=video_id)
         # assert video_model.video.status == "COMPLETED"
         
     def send_message_to_rabbit_mq(self, video_id: str):
